@@ -192,81 +192,97 @@ export function ChessGame() {
 
   return (
     <section className="flex min-h-screen w-screen shrink-0 flex-col items-center justify-center px-6 py-24">
-      <div className="flex flex-col items-center gap-6 w-full max-w-lg">
+      <div className="flex flex-col items-center gap-6 w-full max-w-xl">
         <div className="text-center">
-          <div className="mb-2 inline-block rounded-full border border-foreground/20 bg-foreground/10 px-4 py-1.5 backdrop-blur-md">
-            <p className="font-mono text-xs text-foreground/80">♟ Шахматы</p>
+          <div className="mb-2 inline-block rounded-full border border-white/20 bg-white/10 px-4 py-1.5 backdrop-blur-md">
+            <p className="font-mono text-xs text-white/80">♟ Шахматы</p>
           </div>
-          <h2 className="font-sans text-3xl font-light tracking-tight text-foreground md:text-4xl">
+          <h2 className="font-sans text-3xl font-light tracking-tight text-white md:text-4xl">
             Сыграй с роботом
           </h2>
         </div>
 
-        <div className="rounded-xl border border-foreground/20 bg-foreground/10 px-4 py-2 backdrop-blur-md">
-          <p className="font-mono text-sm text-foreground/90">{status}</p>
+        <div className={`rounded-xl px-5 py-2.5 font-mono text-sm font-medium shadow-lg ${
+          gameOver
+            ? status.includes("победили") ? "bg-emerald-500 text-white" : "bg-red-500/90 text-white"
+            : status.includes("думает") ? "bg-blue-600/90 text-white" : "bg-zinc-900 text-white border border-white/10"
+        }`}>
+          {status}
         </div>
 
-        <div className="relative">
+        <div className="rounded-2xl bg-zinc-900 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.7)] border border-white/10">
           <div className="flex">
-            <div className="flex flex-col justify-around pr-2">
+            <div className="flex flex-col justify-around pr-2 pb-[22px]">
               {ranks.map(r => (
-                <span key={r} className="font-mono text-xs text-foreground/40 w-3 text-center">{r}</span>
+                <span key={r} className="font-mono text-[11px] text-zinc-500 w-3 text-center leading-none">{r}</span>
               ))}
             </div>
-            <div className="border border-foreground/20 rounded-lg overflow-hidden shadow-2xl">
-              {board.map((row, r) => (
-                <div key={r} className="flex">
-                  {row.map((sq, c) => {
-                    const isLight = (r + c) % 2 === 0
-                    const isSelected = selected?.[0] === r && selected?.[1] === c
-                    const isValid = validMoves.some(([vr, vc]) => vr === r && vc === c)
-                    const isLastFrom = lastMove?.from[0] === r && lastMove?.from[1] === c
-                    const isLastTo = lastMove?.to[0] === r && lastMove?.to[1] === c
+            <div>
+              <div className="rounded-xl overflow-hidden shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
+                {board.map((row, r) => (
+                  <div key={r} className="flex">
+                    {row.map((sq, c) => {
+                      const isLight = (r + c) % 2 === 0
+                      const isSelected = selected?.[0] === r && selected?.[1] === c
+                      const isValid = validMoves.some(([vr, vc]) => vr === r && vc === c)
+                      const isLastFrom = lastMove?.from[0] === r && lastMove?.from[1] === c
+                      const isLastTo = lastMove?.to[0] === r && lastMove?.to[1] === c
 
-                    let bg = isLight ? "bg-amber-100" : "bg-amber-800"
-                    if (isSelected) bg = "bg-yellow-400"
-                    else if (isLastFrom || isLastTo) bg = isLight ? "bg-yellow-200" : "bg-yellow-600"
+                      let bgStyle: React.CSSProperties = {}
+                      if (isSelected) bgStyle = { backgroundColor: "#f6f669" }
+                      else if (isLastFrom || isLastTo) bgStyle = { backgroundColor: isLight ? "#cdd16f" : "#aaa23a" }
+                      else bgStyle = { backgroundColor: isLight ? "#f0d9b5" : "#b58863" }
 
-                    return (
-                      <div
-                        key={c}
-                        onClick={() => handleSquareClick(r, c)}
-                        className={`relative flex items-center justify-center w-[42px] h-[42px] sm:w-[52px] sm:h-[52px] md:w-[60px] md:h-[60px] ${bg} cursor-pointer transition-colors duration-100 select-none`}
-                      >
-                        {isValid && (
-                          <div className={`absolute inset-0 flex items-center justify-center ${sq ? "ring-4 ring-inset ring-red-500/70" : ""}`}>
-                            {!sq && <div className="w-3 h-3 rounded-full bg-black/25" />}
-                          </div>
-                        )}
-                        {sq && (
-                          <span className={`text-2xl sm:text-3xl md:text-4xl leading-none select-none ${sq.color === "w" ? "drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]" : "drop-shadow-[0_1px_2px_rgba(255,255,255,0.3)]"}`}>
-                            {PIECE_UNICODE[`${sq.color}${sq.type}`]}
-                          </span>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              ))}
+                      return (
+                        <div
+                          key={c}
+                          onClick={() => handleSquareClick(r, c)}
+                          style={bgStyle}
+                          className="relative flex items-center justify-center w-[44px] h-[44px] sm:w-[54px] sm:h-[54px] md:w-[62px] md:h-[62px] cursor-pointer transition-none select-none hover:brightness-110"
+                        >
+                          {isValid && !sq && (
+                            <div className="w-[30%] h-[30%] rounded-full bg-black/20" />
+                          )}
+                          {isValid && sq && (
+                            <div className="absolute inset-0 rounded-full border-4 border-black/20 box-border" />
+                          )}
+                          {sq && (
+                            <span
+                              className="leading-none select-none text-[28px] sm:text-[34px] md:text-[40px]"
+                              style={{
+                                filter: sq.color === "w"
+                                  ? "drop-shadow(0 1px 3px rgba(0,0,0,0.5))"
+                                  : "drop-shadow(0 1px 2px rgba(0,0,0,0.8))"
+                              }}
+                            >
+                              {PIECE_UNICODE[`${sq.color}${sq.type}`]}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+              <div className="flex pt-1">
+                {files.map(f => (
+                  <span key={f} className="font-mono text-[11px] text-zinc-500 w-[44px] sm:w-[54px] md:w-[62px] text-center">{f}</span>
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="flex justify-around pl-5 pt-1">
-            {files.map(f => (
-              <span key={f} className="font-mono text-xs text-foreground/40 w-[42px] sm:w-[52px] md:w-[60px] text-center">{f}</span>
-            ))}
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex items-center gap-4">
           <button
             onClick={resetGame}
-            className="rounded-lg border border-foreground/20 bg-foreground/10 px-5 py-2.5 font-sans text-sm font-medium text-foreground/90 backdrop-blur-md transition-all hover:bg-foreground/20 hover:text-foreground"
+            className="rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-white/10 px-5 py-2.5 font-sans text-sm font-medium text-white transition-all shadow-md"
           >
             Новая игра
           </button>
         </div>
 
-        <div className="flex gap-6 font-mono text-xs text-foreground/50">
+        <div className="flex gap-6 font-mono text-xs text-zinc-500">
           <span>Вы — белые ♔</span>
           <span>Робот — чёрные ♚</span>
         </div>
