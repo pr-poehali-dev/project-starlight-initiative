@@ -367,7 +367,7 @@ export function ChessGame() {
                           style={{
                             color: sq.color === "w" ? "#ffffff" : "#000000",
                             filter: sq.color === "w"
-                              ? "drop-shadow(0 1px 3px rgba(0,0,0,0.8)) drop-shadow(0 0 2px rgba(0,0,0,0.6))"
+                              ? "drop-shadow(0 0 1px rgba(0,0,0,1)) drop-shadow(0 0 2px rgba(0,0,0,0.8)) drop-shadow(1px 1px 0px rgba(0,0,0,0.9))"
                               : "drop-shadow(0 0 1px rgba(255,255,255,1)) drop-shadow(0 0 2px rgba(255,255,255,0.8)) drop-shadow(1px 1px 0px rgba(255,255,255,0.9))"
                           }}
                         >
