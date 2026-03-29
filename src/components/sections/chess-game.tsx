@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback } from "react"
 
 type Piece = {
   type: "K" | "Q" | "R" | "B" | "N" | "P"
@@ -7,13 +7,35 @@ type Piece = {
 
 type Square = Piece | null
 type Board = Square[][]
+type Difficulty = "easy" | "medium" | "hard" | "impossible"
 
 const PIECE_UNICODE: Record<string, string> = {
   wK: "♔", wQ: "♕", wR: "♖", wB: "♗", wN: "♘", wP: "♙",
   bK: "♚", bQ: "♛", bR: "♜", bB: "♝", bN: "♞", bP: "♟",
 }
 
-const PIECE_VALUES: Record<string, number> = { K: 900, Q: 9, R: 5, B: 3, N: 3, P: 1 }
+const PIECE_VALUES: Record<string, number> = { K: 20000, Q: 900, R: 500, B: 330, N: 320, P: 100 }
+
+const PAWN_TABLE = [
+  [0,0,0,0,0,0,0,0],
+  [50,50,50,50,50,50,50,50],
+  [10,10,20,30,30,20,10,10],
+  [5,5,10,25,25,10,5,5],
+  [0,0,0,20,20,0,0,0],
+  [5,-5,-10,0,0,-10,-5,5],
+  [5,10,10,-20,-20,10,10,5],
+  [0,0,0,0,0,0,0,0],
+]
+const KNIGHT_TABLE = [
+  [-50,-40,-30,-30,-30,-30,-40,-50],
+  [-40,-20,0,0,0,0,-20,-40],
+  [-30,0,10,15,15,10,0,-30],
+  [-30,5,15,20,20,15,5,-30],
+  [-30,0,15,20,20,15,0,-30],
+  [-30,5,10,15,15,10,5,-30],
+  [-40,-20,0,5,5,0,-20,-40],
+  [-50,-40,-30,-30,-30,-30,-40,-50],
+]
 
 function createInitialBoard(): Board {
   const b: Board = Array(8).fill(null).map(() => Array(8).fill(null))
@@ -51,7 +73,6 @@ function getMoves(board: Board, r: number, c: number): [number, number][] {
       else { if (board[nr][nc]!.color === enemy) moves.push([nr, nc]); break }
     }
   }
-
   const jump = (dr: number, dc: number) => {
     const nr = r + dr, nc = c + dc
     if (inBounds(nr, nc) && board[nr][nc]?.color !== color) moves.push([nr, nc])
@@ -64,10 +85,9 @@ function getMoves(board: Board, r: number, c: number): [number, number][] {
       moves.push([r + dir, c])
       if (r === start && !board[r + 2 * dir][c]) moves.push([r + 2 * dir, c])
     }
-    for (const dc of [-1, 1]) {
+    for (const dc of [-1, 1])
       if (inBounds(r + dir, c + dc) && board[r + dir][c + dc]?.color === enemy)
         moves.push([r + dir, c + dc])
-    }
   } else if (type === "N") {
     for (const [dr, dc] of [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]) jump(dr, dc)
   } else if (type === "K") {
@@ -82,33 +102,93 @@ function getMoves(board: Board, r: number, c: number): [number, number][] {
   return moves
 }
 
+function getAllMoves(board: Board, color: "w" | "b") {
+  const all: { from: [number, number]; to: [number, number] }[] = []
+  for (let r = 0; r < 8; r++)
+    for (let c = 0; c < 8; c++)
+      if (board[r][c]?.color === color)
+        for (const to of getMoves(board, r, c))
+          all.push({ from: [r, c], to })
+  return all
+}
+
 function evaluateBoard(board: Board): number {
   let score = 0
   for (let r = 0; r < 8; r++)
     for (let c = 0; c < 8; c++) {
       const p = board[r][c]
-      if (p) score += (p.color === "b" ? 1 : -1) * PIECE_VALUES[p.type]
+      if (!p) continue
+      let val = PIECE_VALUES[p.type]
+      if (p.type === "P") val += p.color === "b" ? PAWN_TABLE[r][c] : PAWN_TABLE[7 - r][c]
+      if (p.type === "N") val += p.color === "b" ? KNIGHT_TABLE[r][c] : KNIGHT_TABLE[7 - r][c]
+      score += p.color === "b" ? val : -val
     }
   return score
 }
 
-function getBestMove(board: Board): { from: [number, number]; to: [number, number] } | null {
-  let bestScore = -Infinity
-  let bestMove: { from: [number, number]; to: [number, number] } | null = null
+function applyMove(board: Board, from: [number, number], to: [number, number]): Board {
+  const nb = cloneBoard(board)
+  nb[to[0]][to[1]] = nb[from[0]][from[1]]
+  nb[from[0]][from[1]] = null
+  if (nb[to[0]][to[1]]?.type === "P" && to[0] === 7) nb[to[0]][to[1]] = { type: "Q", color: "b" }
+  if (nb[to[0]][to[1]]?.type === "P" && to[0] === 0) nb[to[0]][to[1]] = { type: "Q", color: "w" }
+  return nb
+}
 
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      if (board[r][c]?.color !== "b") continue
-      const moves = getMoves(board, r, c)
-      for (const [nr, nc] of moves) {
-        const nb = cloneBoard(board)
-        nb[nr][nc] = nb[r][c]
-        nb[r][c] = null
-        if (nb[nr][nc]?.type === "P" && nr === 7) nb[nr][nc] = { type: "Q", color: "b" }
-        const score = evaluateBoard(nb)
-        if (score > bestScore) { bestScore = score; bestMove = { from: [r, c], to: [nr, nc] } }
-      }
+function minimax(board: Board, depth: number, alpha: number, beta: number, maximizing: boolean): number {
+  if (depth === 0) return evaluateBoard(board)
+  const color = maximizing ? "b" : "w"
+  const moves = getAllMoves(board, color)
+  if (moves.length === 0) return maximizing ? -99999 : 99999
+
+  if (maximizing) {
+    let best = -Infinity
+    for (const m of moves) {
+      const nb = applyMove(board, m.from, m.to)
+      best = Math.max(best, minimax(nb, depth - 1, alpha, beta, false))
+      alpha = Math.max(alpha, best)
+      if (beta <= alpha) break
     }
+    return best
+  } else {
+    let best = Infinity
+    for (const m of moves) {
+      const nb = applyMove(board, m.from, m.to)
+      best = Math.min(best, minimax(nb, depth - 1, alpha, beta, true))
+      beta = Math.min(beta, best)
+      if (beta <= alpha) break
+    }
+    return best
+  }
+}
+
+function getBestMove(board: Board, difficulty: Difficulty) {
+  const moves = getAllMoves(board, "b")
+  if (!moves.length) return null
+
+  if (difficulty === "easy") {
+    const random = moves[Math.floor(Math.random() * moves.length)]
+    return random
+  }
+
+  if (difficulty === "medium") {
+    const scored = moves.map(m => {
+      const nb = applyMove(board, m.from, m.to)
+      return { m, score: evaluateBoard(nb) }
+    })
+    scored.sort((a, b) => b.score - a.score)
+    const topN = scored.slice(0, 5)
+    if (Math.random() < 0.4) return topN[Math.floor(Math.random() * topN.length)].m
+    return topN[0].m
+  }
+
+  const depth = difficulty === "hard" ? 2 : 4
+  let bestScore = -Infinity
+  let bestMove = moves[0]
+  for (const m of moves) {
+    const nb = applyMove(board, m.from, m.to)
+    const score = minimax(nb, depth - 1, -Infinity, Infinity, false)
+    if (score > bestScore) { bestScore = score; bestMove = m }
   }
   return bestMove
 }
@@ -120,6 +200,13 @@ function isKingCapture(board: Board, color: "w" | "b"): boolean {
   return true
 }
 
+const DIFFICULTIES: { key: Difficulty; label: string; color: string }[] = [
+  { key: "easy", label: "Легко", color: "bg-emerald-600 hover:bg-emerald-500" },
+  { key: "medium", label: "Средне", color: "bg-blue-600 hover:bg-blue-500" },
+  { key: "hard", label: "Сложно", color: "bg-orange-600 hover:bg-orange-500" },
+  { key: "impossible", label: "Невозможно", color: "bg-red-700 hover:bg-red-600" },
+]
+
 export function ChessGame() {
   const [board, setBoard] = useState<Board>(createInitialBoard)
   const [selected, setSelected] = useState<[number, number] | null>(null)
@@ -128,22 +215,20 @@ export function ChessGame() {
   const [status, setStatus] = useState<string>("Ваш ход — вы играете белыми")
   const [gameOver, setGameOver] = useState(false)
   const [lastMove, setLastMove] = useState<{ from: [number, number]; to: [number, number] } | null>(null)
+  const [difficulty, setDifficulty] = useState<Difficulty>("medium")
 
-  const makeAiMove = useCallback((currentBoard: Board) => {
+  const makeAiMove = useCallback((currentBoard: Board, diff: Difficulty) => {
+    const delay = diff === "impossible" ? 800 : 400
     setTimeout(() => {
-      const move = getBestMove(currentBoard)
+      const move = getBestMove(currentBoard, diff)
       if (!move) { setStatus("Пат — ничья!"); setGameOver(true); return }
-      const nb = cloneBoard(currentBoard)
-      nb[move.to[0]][move.to[1]] = nb[move.from[0]][move.from[1]]
-      nb[move.from[0]][move.from[1]] = null
-      if (nb[move.to[0]][move.to[1]]?.type === "P" && move.to[0] === 7)
-        nb[move.to[0]][move.to[1]] = { type: "Q", color: "b" }
+      const nb = applyMove(currentBoard, move.from, move.to)
       setLastMove(move)
       setBoard(nb)
       if (isKingCapture(nb, "w")) { setStatus("Мат! Робот победил 🤖"); setGameOver(true) }
       else setStatus("Ваш ход — вы играете белыми")
       setTurn("w")
-    }, 400)
+    }, delay)
   }, [])
 
   const handleSquareClick = useCallback((r: number, c: number) => {
@@ -152,18 +237,16 @@ export function ChessGame() {
     if (selected) {
       const isValid = validMoves.some(([vr, vc]) => vr === r && vc === c)
       if (isValid) {
-        const nb = cloneBoard(board)
-        nb[r][c] = nb[selected[0]][selected[1]]
-        nb[selected[0]][selected[1]] = null
-        if (nb[r][c]?.type === "P" && r === 0) nb[r][c] = { type: "Q", color: "w" }
+        const nb = applyMove(board, selected, [r, c])
         setLastMove({ from: selected, to: [r, c] })
         setBoard(nb)
         setSelected(null)
         setValidMoves([])
         if (isKingCapture(nb, "b")) { setStatus("Мат! Вы победили 🎉"); setGameOver(true); return }
-        setStatus("Робот думает...")
+        const thinkMsg = difficulty === "impossible" ? "Робот просчитывает все варианты... 🧠" : "Робот думает..."
+        setStatus(thinkMsg)
         setTurn("b")
-        makeAiMove(nb)
+        makeAiMove(nb, difficulty)
         return
       }
     }
@@ -175,9 +258,10 @@ export function ChessGame() {
       setSelected(null)
       setValidMoves([])
     }
-  }, [board, selected, validMoves, turn, gameOver, makeAiMove])
+  }, [board, selected, validMoves, turn, gameOver, makeAiMove, difficulty])
 
-  const resetGame = () => {
+  const resetGame = (newDiff?: Difficulty) => {
+    const d = newDiff ?? difficulty
     setBoard(createInitialBoard())
     setSelected(null)
     setValidMoves([])
@@ -185,14 +269,16 @@ export function ChessGame() {
     setStatus("Ваш ход — вы играете белыми")
     setGameOver(false)
     setLastMove(null)
+    if (newDiff) setDifficulty(newDiff)
   }
 
   const files = ["a", "b", "c", "d", "e", "f", "g", "h"]
   const ranks = ["8", "7", "6", "5", "4", "3", "2", "1"]
+  const currentDiff = DIFFICULTIES.find(d => d.key === difficulty)!
 
   return (
     <section className="flex min-h-screen w-screen shrink-0 flex-col items-center justify-center px-6 py-24">
-      <div className="flex flex-col items-center gap-6 w-full max-w-xl">
+      <div className="flex flex-col items-center gap-5 w-full max-w-xl">
         <div className="text-center">
           <div className="mb-2 inline-block rounded-full border border-white/20 bg-white/10 px-4 py-1.5 backdrop-blur-md">
             <p className="font-mono text-xs text-white/80">♟ Шахматы</p>
@@ -202,14 +288,35 @@ export function ChessGame() {
           </h2>
         </div>
 
-        <div className={`rounded-xl px-5 py-2.5 font-mono text-sm font-medium shadow-lg ${
+        {/* Уровни сложности */}
+        <div className="flex gap-2 flex-wrap justify-center">
+          {DIFFICULTIES.map(d => (
+            <button
+              key={d.key}
+              onClick={() => resetGame(d.key)}
+              className={`rounded-lg px-3 py-1.5 font-mono text-xs font-medium text-white transition-all shadow-md ${
+                difficulty === d.key
+                  ? d.color + " ring-2 ring-white/30 ring-offset-1 ring-offset-transparent scale-105"
+                  : "bg-zinc-800 hover:bg-zinc-700 border border-white/10"
+              }`}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Статус */}
+        <div className={`rounded-xl px-5 py-2.5 font-mono text-sm font-medium shadow-lg transition-all ${
           gameOver
-            ? status.includes("победили") ? "bg-emerald-500 text-white" : "bg-red-500/90 text-white"
-            : status.includes("думает") ? "bg-blue-600/90 text-white" : "bg-zinc-900 text-white border border-white/10"
+            ? status.includes("победили") ? "bg-emerald-500 text-white" : "bg-red-600 text-white"
+            : status.includes("думает") || status.includes("просчитывает")
+              ? "bg-blue-600 text-white"
+              : "bg-zinc-900 text-white border border-white/10"
         }`}>
           {status}
         </div>
 
+        {/* Доска */}
         <div className="rounded-2xl bg-zinc-900 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.7)] border border-white/10">
           <div className="flex">
             <div className="flex flex-col justify-around pr-2 pb-[22px]">
@@ -238,13 +345,13 @@ export function ChessGame() {
                           key={c}
                           onClick={() => handleSquareClick(r, c)}
                           style={bgStyle}
-                          className="relative flex items-center justify-center w-[44px] h-[44px] sm:w-[54px] sm:h-[54px] md:w-[62px] md:h-[62px] cursor-pointer transition-none select-none hover:brightness-110"
+                          className="relative flex items-center justify-center w-[44px] h-[44px] sm:w-[54px] sm:h-[54px] md:w-[62px] md:h-[62px] cursor-pointer select-none hover:brightness-110"
                         >
                           {isValid && !sq && (
                             <div className="w-[30%] h-[30%] rounded-full bg-black/20" />
                           )}
                           {isValid && sq && (
-                            <div className="absolute inset-0 rounded-full border-4 border-black/20 box-border" />
+                            <div className="absolute inset-0 border-4 border-black/25" />
                           )}
                           {sq && (
                             <span
@@ -275,7 +382,7 @@ export function ChessGame() {
 
         <div className="flex items-center gap-4">
           <button
-            onClick={resetGame}
+            onClick={() => resetGame()}
             className="rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-white/10 px-5 py-2.5 font-sans text-sm font-medium text-white transition-all shadow-md"
           >
             Новая игра
@@ -284,7 +391,9 @@ export function ChessGame() {
 
         <div className="flex gap-6 font-mono text-xs text-zinc-500">
           <span>Вы — белые ♔</span>
-          <span>Робот — чёрные ♚</span>
+          <span className={`${difficulty === "impossible" ? "text-red-400" : ""}`}>
+            Робот [{currentDiff.label}] ♚
+          </span>
         </div>
       </div>
     </section>
