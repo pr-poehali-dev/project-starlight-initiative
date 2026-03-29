@@ -328,12 +328,12 @@ export function ChessGame() {
                   const isLastFrom = lastMove?.from[0] === r && lastMove?.from[1] === c
                   const isLastTo = lastMove?.to[0] === r && lastMove?.to[1] === c
 
-                  const labelColor = isLight ? "rgba(180,120,60,0.9)" : "rgba(240,217,181,0.9)"
+                  const labelColor = isLight ? "rgba(80,80,80,0.7)" : "rgba(200,200,200,0.7)"
 
                   let bgStyle: React.CSSProperties = {}
                   if (isSelected) bgStyle = { backgroundColor: "#f6f669" }
-                  else if (isLastFrom || isLastTo) bgStyle = { backgroundColor: isLight ? "#cdd16f" : "#aaa23a" }
-                  else bgStyle = { backgroundColor: isLight ? "#f0d9b5" : "#b58863" }
+                  else if (isLastFrom || isLastTo) bgStyle = { backgroundColor: isLight ? "#e8e84a" : "#555500" }
+                  else bgStyle = { backgroundColor: isLight ? "#ffffff" : "#1a1a1a" }
 
                   return (
                     <div
