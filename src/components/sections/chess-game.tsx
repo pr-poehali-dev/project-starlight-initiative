@@ -365,9 +365,10 @@ export function ChessGame() {
                         <span
                           className="leading-none select-none text-[28px] sm:text-[34px] md:text-[40px]"
                           style={{
+                            color: sq.color === "w" ? "#ffffff" : "#000000",
                             filter: sq.color === "w"
-                              ? "drop-shadow(0 1px 3px rgba(0,0,0,0.5))"
-                              : "drop-shadow(0 1px 2px rgba(0,0,0,0.8))"
+                              ? "drop-shadow(0 1px 3px rgba(0,0,0,0.7)) drop-shadow(0 0 1px rgba(0,0,0,0.5))"
+                              : "drop-shadow(0 1px 2px rgba(255,255,255,0.2))"
                           }}
                         >
                           {PIECE_UNICODE[`${sq.color}${sq.type}`]}
