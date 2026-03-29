@@ -318,65 +318,66 @@ export function ChessGame() {
 
         {/* Доска */}
         <div className="rounded-2xl bg-zinc-900 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.7)] border border-white/10">
-          <div className="flex">
-            <div className="flex flex-col justify-around pr-2 pb-[22px]">
-              {ranks.map(r => (
-                <span key={r} className="font-mono text-[11px] text-zinc-500 w-3 text-center leading-none">{r}</span>
-              ))}
-            </div>
-            <div>
-              <div className="rounded-xl overflow-hidden shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
-                {board.map((row, r) => (
-                  <div key={r} className="flex">
-                    {row.map((sq, c) => {
-                      const isLight = (r + c) % 2 === 0
-                      const isSelected = selected?.[0] === r && selected?.[1] === c
-                      const isValid = validMoves.some(([vr, vc]) => vr === r && vc === c)
-                      const isLastFrom = lastMove?.from[0] === r && lastMove?.from[1] === c
-                      const isLastTo = lastMove?.to[0] === r && lastMove?.to[1] === c
+          <div className="rounded-xl overflow-hidden shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
+            {board.map((row, r) => (
+              <div key={r} className="flex">
+                {row.map((sq, c) => {
+                  const isLight = (r + c) % 2 === 0
+                  const isSelected = selected?.[0] === r && selected?.[1] === c
+                  const isValid = validMoves.some(([vr, vc]) => vr === r && vc === c)
+                  const isLastFrom = lastMove?.from[0] === r && lastMove?.from[1] === c
+                  const isLastTo = lastMove?.to[0] === r && lastMove?.to[1] === c
 
-                      let bgStyle: React.CSSProperties = {}
-                      if (isSelected) bgStyle = { backgroundColor: "#f6f669" }
-                      else if (isLastFrom || isLastTo) bgStyle = { backgroundColor: isLight ? "#cdd16f" : "#aaa23a" }
-                      else bgStyle = { backgroundColor: isLight ? "#f0d9b5" : "#b58863" }
+                  const labelColor = isLight ? "rgba(180,120,60,0.9)" : "rgba(240,217,181,0.9)"
 
-                      return (
-                        <div
-                          key={c}
-                          onClick={() => handleSquareClick(r, c)}
-                          style={bgStyle}
-                          className="relative flex items-center justify-center w-[44px] h-[44px] sm:w-[54px] sm:h-[54px] md:w-[62px] md:h-[62px] cursor-pointer select-none hover:brightness-110"
+                  let bgStyle: React.CSSProperties = {}
+                  if (isSelected) bgStyle = { backgroundColor: "#f6f669" }
+                  else if (isLastFrom || isLastTo) bgStyle = { backgroundColor: isLight ? "#cdd16f" : "#aaa23a" }
+                  else bgStyle = { backgroundColor: isLight ? "#f0d9b5" : "#b58863" }
+
+                  return (
+                    <div
+                      key={c}
+                      onClick={() => handleSquareClick(r, c)}
+                      style={bgStyle}
+                      className="relative flex items-center justify-center w-[44px] h-[44px] sm:w-[54px] sm:h-[54px] md:w-[62px] md:h-[62px] cursor-pointer select-none hover:brightness-110"
+                    >
+                      {/* Цифра — только левый столбец */}
+                      {c === 0 && (
+                        <span className="absolute top-[2px] left-[3px] font-mono text-[9px] sm:text-[10px] font-bold leading-none" style={{ color: labelColor }}>
+                          {ranks[r]}
+                        </span>
+                      )}
+                      {/* Буква — только нижняя строка */}
+                      {r === 7 && (
+                        <span className="absolute bottom-[2px] right-[3px] font-mono text-[9px] sm:text-[10px] font-bold leading-none" style={{ color: labelColor }}>
+                          {files[c]}
+                        </span>
+                      )}
+
+                      {isValid && !sq && (
+                        <div className="w-[30%] h-[30%] rounded-full bg-black/20" />
+                      )}
+                      {isValid && sq && (
+                        <div className="absolute inset-0 border-4 border-black/25" />
+                      )}
+                      {sq && (
+                        <span
+                          className="leading-none select-none text-[28px] sm:text-[34px] md:text-[40px]"
+                          style={{
+                            filter: sq.color === "w"
+                              ? "drop-shadow(0 1px 3px rgba(0,0,0,0.5))"
+                              : "drop-shadow(0 1px 2px rgba(0,0,0,0.8))"
+                          }}
                         >
-                          {isValid && !sq && (
-                            <div className="w-[30%] h-[30%] rounded-full bg-black/20" />
-                          )}
-                          {isValid && sq && (
-                            <div className="absolute inset-0 border-4 border-black/25" />
-                          )}
-                          {sq && (
-                            <span
-                              className="leading-none select-none text-[28px] sm:text-[34px] md:text-[40px]"
-                              style={{
-                                filter: sq.color === "w"
-                                  ? "drop-shadow(0 1px 3px rgba(0,0,0,0.5))"
-                                  : "drop-shadow(0 1px 2px rgba(0,0,0,0.8))"
-                              }}
-                            >
-                              {PIECE_UNICODE[`${sq.color}${sq.type}`]}
-                            </span>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                ))}
+                          {PIECE_UNICODE[`${sq.color}${sq.type}`]}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
-              <div className="flex pt-1">
-                {files.map(f => (
-                  <span key={f} className="font-mono text-[11px] text-zinc-500 w-[44px] sm:w-[54px] md:w-[62px] text-center">{f}</span>
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
