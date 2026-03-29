@@ -209,8 +209,8 @@ export default function Index() {
 
       <nav
         className={`fixed left-0 right-0 top-0 z-50 flex items-center justify-between px-6 py-6 transition-all duration-500 md:px-12 ${
-          isLoaded ? "opacity-100" : "opacity-0"
-        } ${currentSection === 1 ? "opacity-0 pointer-events-none" : ""}`}
+          !isLoaded || currentSection === 1 ? "opacity-0 pointer-events-none" : "opacity-100"
+        }`}
       >
         <button
           onClick={() => scrollToSection(0)}
