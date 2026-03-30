@@ -356,10 +356,10 @@ export function ChessGame() {
                       )}
 
                       {isValid && !sq && (
-                        <div className="w-[30%] h-[30%] rounded-full bg-black/20" />
+                        <div className="w-[30%] h-[30%] rounded-full bg-black/40 ring-2 ring-white/60" />
                       )}
                       {isValid && sq && (
-                        <div className="absolute inset-0 border-4 border-black/25" />
+                        <div className="absolute inset-0 border-4 border-black/60 ring-inset ring-2 ring-white/40" />
                       )}
                       {sq && (
                         <span
